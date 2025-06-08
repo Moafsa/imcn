@@ -7,8 +7,8 @@ const pool = new Pool({
   ssl: false,
 });
 
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
-  const { id } = context.params;
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params;
   try {
     console.log('Buscando dados do membro:', id);
     const result = await pool.query(
