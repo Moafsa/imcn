@@ -32,9 +32,16 @@ async function parseForm(req: NextRequest) {
   return { fields, files };
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").filter(Boolean).pop();
+  // ... restante do código GET, usando o id ...
+}
+
+export async function PUT(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").filter(Boolean).pop();
   try {
-    const id = params.id;
     let isMultipart = req.headers.get('content-type')?.includes('multipart/form-data');
     let fields: any = {};
     let files: any = {};
@@ -110,9 +117,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest) {
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").filter(Boolean).pop();
   try {
-    const { id } = await context.params;
     // Excluir históricos relacionados antes de excluir o membro
     await pool.query('DELETE FROM member_history WHERE member_id = $1', [id]);
     await pool.query('DELETE FROM members WHERE id = $1', [id]);
