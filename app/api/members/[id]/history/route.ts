@@ -8,7 +8,8 @@ const pool = new Pool({
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const id = url.pathname.split("/").filter(Boolean).pop();
+  const segments = url.pathname.split("/").filter(Boolean);
+  const id = segments[segments.length - 2];
 
   if (!id || isNaN(Number(id))) {
     return NextResponse.json({ error: "Invalid member id" }, { status: 400 });
