@@ -7,17 +7,13 @@ const pool = new Pool({
   ssl: false,
 });
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: { params: { id: string } }) {
+  const { id } = context.params;
   try {
-    const { id: memberId } = await context.params;
-    
-    console.log('Buscando dados do membro:', memberId);
+    console.log('Buscando dados do membro:', id);
     const result = await pool.query(
       'SELECT * FROM members WHERE id = $1',
-      [memberId]
+      [id]
     );
     console.log('Resultado do membro:', result.rows);
     if (result.rows.length === 0) {
@@ -135,7 +131,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="card-${memberId}.pdf"`,
+        'Content-Disposition': `attachment; filename="card-${id}.pdf"`,
       },
     });
   } catch (error) {
