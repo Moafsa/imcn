@@ -7,17 +7,22 @@ const pool = new Pool({
 });
 
 export async function GET(req: NextRequest) {
-  // Extrai o id manualmente da URL
   const url = new URL(req.url);
   const id = url.pathname.split("/").filter(Boolean).pop();
 
+  if (!id || isNaN(Number(id))) {
+    return NextResponse.json({ error: "Invalid member id" }, { status: 400 });
+  }
+
   try {
+    console.log("Buscando histórico para o membro:", id);
     const result = await pool.query(
       'SELECT change_type, old_value, new_value, changed_at FROM member_history WHERE member_id = $1 ORDER BY changed_at DESC',
       [id]
     );
     return NextResponse.json(result.rows);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch history' }, { status: 500 });
+    console.error("Erro ao buscar histórico:", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 } 
