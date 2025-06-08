@@ -8,52 +8,50 @@ const pool = new Pool({
 });
 
 export async function GET(req: NextRequest) {
-  // Extrai o id manualmente da URL
+  // Extrai o id manualmente da URL (corrigido para pegar o penúltimo segmento)
   const url = new URL(req.url);
-  const id = url.pathname.split("/").filter(Boolean).pop();
+  const segments = url.pathname.split("/").filter(Boolean);
+  const id = segments[segments.length - 2];
+  console.log('[CARD] id extraído da URL:', id);
   try {
-    console.log('Buscando dados do membro:', id);
+    console.log('[CARD] Buscando dados do membro:', id);
     const result = await pool.query(
       'SELECT * FROM members WHERE id = $1',
       [id]
     );
-    console.log('Resultado do membro:', result.rows);
+    console.log('[CARD] Resultado do membro:', result.rows);
     if (result.rows.length === 0) {
-      console.log('Membro não encontrado');
+      console.log('[CARD] Membro não encontrado');
       return NextResponse.json({ error: 'Member not found' }, { status: 404 });
     }
     const member = result.rows[0];
-    
     if (member.status !== 'Ativo') {
+      console.log('[CARD] Membro inativo, bloqueando geração de carteirinha.');
       return NextResponse.json({ error: 'Carteirinha só pode ser gerada para membros ativos.' }, { status: 403 });
     }
-    
     // Buscar configurações da igreja
-    console.log('Buscando settings...');
+    console.log('[CARD] Buscando settings...');
     const settingsResult = await pool.query('SELECT * FROM settings WHERE id = 1');
-    console.log('Resultado settings:', settingsResult.rows);
+    console.log('[CARD] Resultado settings:', settingsResult.rows);
     const settings = settingsResult.rows[0] || {};
     const churchName = settings.church_name || 'IMCN - Igreja Missionária Caminho Novo';
     const churchAddress = settings.address || '';
     const churchCity = settings.city || '';
     const cardValidity = settings.card_validity || 12;
     const logoUrl = settings.logo_url || '';
-
     // Criar PDF
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([400, 250]);
     const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
     // Fundo
     page.drawRectangle({ x: 0, y: 0, width: 400, height: 250, color: rgb(0.97, 0.97, 0.97) });
     // Header
     page.drawRectangle({ x: 0, y: 200, width: 400, height: 50, color: rgb(0.2, 0.3, 0.7) });
-
     // Logo
     if (logoUrl) {
       try {
-        console.log('Baixando logo:', logoUrl);
+        console.log('[CARD] Baixando logo:', logoUrl);
         const logoRes = await fetch(logoUrl);
         const logoBuffer = await logoRes.arrayBuffer();
         let logoImg;
@@ -63,21 +61,20 @@ export async function GET(req: NextRequest) {
           logoImg = await pdfDoc.embedJpg(logoBuffer);
         }
         page.drawImage(logoImg, { x: 20, y: 205, width: 40, height: 40 });
-        console.log('Logo embutida com sucesso');
+        console.log('[CARD] Logo embutida com sucesso');
       } catch (e) {
-        console.error('Erro ao baixar/embutir logo:', e);
+        console.error('[CARD] Erro ao baixar/embutir logo:', e);
       }
     }
     // Nome da igreja
     page.drawText(churchName, { x: 70, y: 225, size: 14, font: helveticaBold, color: rgb(1,1,1) });
     page.drawText(churchAddress, { x: 70, y: 212, size: 8, font: helvetica, color: rgb(1,1,1) });
     page.drawText(churchCity, { x: 70, y: 202, size: 8, font: helvetica, color: rgb(1,1,1) });
-
     // Foto do membro
     let photoDrawn = false;
     if (member.photo_url) {
       try {
-        console.log('Baixando foto do membro:', member.photo_url);
+        console.log('[CARD] Baixando foto do membro:', member.photo_url);
         const photoRes = await fetch(member.photo_url);
         const photoBuffer = await photoRes.arrayBuffer();
         let photoImg;
@@ -88,16 +85,15 @@ export async function GET(req: NextRequest) {
         }
         page.drawImage(photoImg, { x: 20, y: 80, width: 100, height: 100 });
         photoDrawn = true;
-        console.log('Foto do membro embutida com sucesso');
+        console.log('[CARD] Foto do membro embutida com sucesso');
       } catch (e) {
-        console.error('Erro ao baixar/embutir foto do membro:', e);
+        console.error('[CARD] Erro ao baixar/embutir foto do membro:', e);
       }
     }
     if (!photoDrawn) {
       page.drawRectangle({ x: 20, y: 80, width: 100, height: 100, borderColor: rgb(0.2,0.2,0.2), borderWidth: 1 });
       page.drawText('FOTO', { x: 55, y: 130, size: 12, font: helvetica, color: rgb(0.5,0.5,0.5) });
     }
-
     // Dados do membro
     let y = 170;
     const left = 140;
@@ -121,14 +117,12 @@ export async function GET(req: NextRequest) {
     }
     line('Cadastro:', new Date(member.created_at).toLocaleDateString('pt-BR'));
     line('Validade:', new Date(member.expires_at).toLocaleDateString('pt-BR'));
-
     // ID
     page.drawText(`ID: ${member.id}`, { x: 20, y: 20, size: 8, font: helvetica, color: rgb(0.5,0.5,0.5) });
-
     // Gerar PDF
-    console.log('Salvando PDF...');
+    console.log('[CARD] Salvando PDF...');
     const pdfBytes = await pdfDoc.save();
-    console.log('PDF gerado com sucesso!');
+    console.log('[CARD] PDF gerado com sucesso!');
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
@@ -137,7 +131,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error generating card:', error);
+    console.error('[CARD] Error generating card:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 
