@@ -6,9 +6,12 @@ const pool = new Pool({
   ssl: false,
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest) {
+  // Extrai o id manualmente da URL
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").filter(Boolean).pop();
+
   try {
-    const { id } = await params;
     const result = await pool.query(
       'SELECT change_type, old_value, new_value, changed_at FROM member_history WHERE member_id = $1 ORDER BY changed_at DESC',
       [id]
