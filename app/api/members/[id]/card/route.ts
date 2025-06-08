@@ -7,8 +7,10 @@ const pool = new Pool({
   ssl: false,
 });
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(req: NextRequest) {
+  // Extrai o id manualmente da URL
+  const url = new URL(req.url);
+  const id = url.pathname.split("/").filter(Boolean).pop();
   try {
     console.log('Buscando dados do membro:', id);
     const result = await pool.query(
